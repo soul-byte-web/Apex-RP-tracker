@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>RP Tracker</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Teko:wght@400;500;600;700&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #eceff1;
+    --panel: #ffffff;
+    --panel-edge: #d6dbdf;
+    --panel-edge-strong: #c1c8cd;
+    --text: #191c1f;
+    --text-dim: #656d73;
+    --accent-gain: #d9611a;
+    --accent-loss: #b6392f;
+    --shadow: rgba(20, 24, 27, 0.10);
+    --cut: 16px;
+    --cut-sm: 9px;
+    color-scheme: light dark;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #15181b;
+      --panel: #1c2023;
+      --panel-edge: #2b3034;
+      --panel-edge-strong: #3a4045;
+      --text: #edf0f2;
+      --text-dim: #8b929a;
+      --accent-gain: #ff8a3d;
+      --accent-loss: #e2645c;
+      --shadow: rgba(0, 0, 0, 0.4);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #15181b;
+    --panel: #1c2023;
+    --panel-edge: #2b3034;
+    --panel-edge-strong: #3a4045;
+    --text: #edf0f2;
+    --text-dim: #8b929a;
+    --accent-gain: #ff8a3d;
+    --accent-loss: #e2645c;
+    --shadow: rgba(0, 0, 0, 0.4);
+  }
+
+  * { box-sizing: border-box; }
+
+  html {
+    scroll-padding-top: env(safe-area-inset-top, 0px);
+  }
+
+  html, body {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Work Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .app {
+    max-width: 460px;
+    margin: 0 auto;
+    padding: 20px 16px 48px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  /* ---------- top bar ---------- */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 2px 8px;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-family: 'Teko', 'Arial Narrow', sans-serif;
+    font-size: 26px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+  }
+
+  .brand .mark {
+    width: 0;
+    height: 0;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-bottom: 13px solid var(--accent-gain);
+  }
+
+  .reset-btn {
+    background: transparent;
+    border: 1px solid var(--panel-edge-strong);
+    color: var(--text-dim);
+    font-family: inherit;
+    font-size: 13px;
+    padding: 6px 12px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+  }
+  .reset-btn:hover { color: var(--text); border-color: var(--text-dim); }
+  .reset-btn.confirming {
+    color: var(--accent-loss);
+    border-color: var(--accent-loss);
+  }
+
+  /* ---------- rank badge ---------- */
+  .rank-badge {
+    position: relative;
+    background: linear-gradient(155deg, color-mix(in srgb, var(--tier-color, #999) 14%, var(--panel)), var(--panel) 55%);
+    border: 1px solid var(--panel-edge);
+    border-top: 3px solid var(--tier-color, var(--panel-edge-strong));
+    clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut));
+    padding: 26px 22px 22px;
+    text-align: center;
+    box-shadow: 0 8px 24px var(--shadow);
+  }
+
+  .rank-name {
+    font-family: 'Teko', 'Arial Narrow', sans-serif;
+    font-size: 22px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--tier-color, var(--text-dim));
+    font-weight: 600;
+    margin-bottom: 2px;
+  }
+
+  .rp-total-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 6px;
+    line-height: 1;
+    margin: 6px 0 18px;
+  }
+
+  .rp-total {
+    font-family: 'Teko', 'Arial Narrow', sans-serif;
+    font-size: 64px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .rp-unit {
+    font-size: 15px;
+    color: var(--text-dim);
+    font-weight: 500;
+    transform: translateY(-4px);
+  }
+
+  .gauge {
+    height: 8px;
+    background: var(--panel-edge);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 10px;
+  }
+
+  .gauge-fill {
+    height: 100%;
+    width: 0%;
+    background: var(--tier-color, var(--accent-gain));
+    transition: width 0.6s cubic-bezier(.22,.9,.3,1);
+  }
+
+  .gauge-label {
+    font-size: 13px;
+    color: var(--text-dim);
+  }
+
+  .set-starting {
+    margin-top: 12px;
+    background: none;
+    border: none;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    color: var(--text-dim);
+    font-size: 12.5px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .set-starting:hover { color: var(--text); }
+
+  .starting-form {
+    display: none;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .starting-form.open { display: flex; }
+  .starting-form input {
+    flex: 1;
+    min-width: 0;
+  }
+  .starting-form button {
+    font-family: inherit;
+    font-size: 13px;
+    border-radius: 3px;
+    border: 1px solid var(--panel-edge-strong);
+    background: var(--panel);
+    color: var(--text);
+    padding: 0 12px;
+    cursor: pointer;
+  }
+
+  /* ---------- stats strip ---------- */
+  .stats-strip {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    background: var(--panel);
+    border: 1px solid var(--panel-edge);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .stat {
+    padding: 14px 8px;
+    text-align: center;
+    border-right: 1px solid var(--panel-edge);
+  }
+  .stat:last-child { border-right: none; }
+
+  .stat-value {
+    display: block;
+    font-family: 'Teko', 'Arial Narrow', sans-serif;
+    font-size: 28px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .stat-label {
+    display: block;
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-top: 2px;
+  }
+
+  /* ---------- log console ---------- */
+  .log-console {
+    background: var(--panel);
+    border: 1px solid var(--panel-edge);
+    border-radius: 4px;
+    padding: 16px;
+  }
+
+  .amount-input {
+    width: 100%;
+    font-family: 'Teko', 'Arial Narrow', sans-serif;
+    font-size: 22px;
+    padding: 10px 14px;
+    border: 1px solid var(--panel-edge-strong);
+    border-radius: 3px;
+    background: var(--bg);
+    color: var(--text);
+    letter-spacing: 0.5px;
+  }
+  .amount-input:focus-visible {
+    outline: 2px solid var(--accent-gain);
+    outline-offset: 1px;
+  }
+  .amount-input::placeholder { font-family: 'Work Sans', sans-serif; font-size: 15px; color: var(--text-dim); }
+
+  .action-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 10px;
+  }
+
+  .action {
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    padding: 13px 8px;
+    border: none;
+    color: #fff;
+    cursor: pointer;
+    clip-path: polygon(var(--cut-sm) 0, 100% 0, 100% calc(100% - var(--cut-sm)), calc(100% - var(--cut-sm)) 100%, 0 100%, 0 var(--cut-sm));
+    transition: filter 0.15s ease, transform 0.1s ease;
+  }
+  .action:active { transform: scale(0.98); }
+  .action.gain { background: var(--accent-gain); }
+  .action.loss { background: var(--accent-loss); }
+  .action:hover { filter: brightness(1.08); }
+  .action:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+
+  .chip-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+  }
+
+  .chip-group-label {
+    font-size: 12.5px;
+    color: var(--text-dim);
+    min-width: 34px;
+  }
+
+  .chip {
+    font-family: 'Teko', 'Arial Narrow', sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    padding: 5px 12px;
+    background: transparent;
+    border: 1px solid var(--panel-edge-strong);
+    color: var(--text);
+    cursor: pointer;
+    clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px);
+    transition: border-color 0.15s ease, color 0.15s ease;
+  }
+  .chip.gain:hover { border-color: var(--accent-gain); color: var(--accent-gain); }
+  .chip.loss:hover { border-color: var(--accent-loss); color: var(--accent-loss); }
+  .chip:focus-visible { outline: 2px solid var(--text); outline-offset: 1px; }
+
+  .input-error {
+    color: var(--accent-loss);
+    font-size: 12.5px;
+    margin: 10px 2px 0;
+  }
+
+  /* ---------- history ---------- */
+  .history-section { margin-top: 4px; }
+
+  .history-title {
+    font-size: 15px;
+    font-weight: 600;
+    margin: 0 2px 10px;
+  }
+
+  .history-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 340px;
+    overflow-y: auto;
+  }
+
+  .history-row {
+    display: grid;
+    grid-template-columns: 64px 1fr auto auto;
+    align-items: center;
+    gap: 10px;
+    background: var(--panel);
+    border: 1px solid var(--panel-edge);
+    border-left: 3px solid var(--row-color, var(--panel-edge-strong));
+    padding: 10px 12px;
+    border-radius: 3px;
+  }
+
+  .history-row.enter {
+    animation: rowIn 0.32s ease-out;
+  }
+  @keyframes rowIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .row-delta {
+    font-family: 'Teko', 'Arial Narrow', sans-serif;
+    font-size: 20px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--row-color, var(--text-dim));
+  }
+
+  .row-total {
+    font-size: 13px;
+    color: var(--text-dim);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .row-time {
+    font-size: 12px;
+    color: var(--text-dim);
+    white-space: nowrap;
+  }
+
+  .row-delete {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 4px 2px;
+  }
+  .row-delete:hover { color: var(--accent-loss); }
+
+  .empty-state {
+    display: none;
+    color: var(--text-dim);
+    font-size: 13.5px;
+    text-align: center;
+    padding: 22px 10px;
+    border: 1px dashed var(--panel-edge-strong);
+    border-radius: 4px;
+  }
+  .empty-state.show { display: block; }
+
+  .footnote {
+    text-align: center;
+    font-size: 11.5px;
+    color: var(--text-dim);
+    margin-top: 6px;
+    padding: 0 10px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="topbar">
+    <div class="brand"><span class="mark"></span>RP Tracker</div>
+    <button class="reset-btn" id="resetBtn" type="button">Reset</button>
+  </div>
+
+  <section class="rank-badge" id="rankBadge">
+    <div class="rank-name" id="rankName">Bronze IV</div>
+    <div class="rp-total-row">
+      <span class="rp-total" id="rpTotal">0</span>
+      <span class="rp-unit">RP</span>
+    </div>
+    <div class="gauge"><div class="gauge-fill" id="gaugeFill"></div></div>
+    <div class="gauge-label" id="gaugeLabel">1,200 RP to Silver</div>
+    <button class="set-starting" id="setStartingToggle" type="button">Already have RP? Set your starting total</button>
+    <div class="starting-form" id="startingForm">
+      <input type="number" id="startingInput" class="amount-input" placeholder="Current RP" inputmode="numeric">
+      <button id="startingSubmit" type="button">Set</button>
+    </div>
+  </section>
+
+  <section class="stats-strip">
+    <div class="stat"><span class="stat-value" id="statPeak">0</span><span class="stat-label">Peak</span></div>
+    <div class="stat"><span class="stat-value" id="statGames">0</span><span class="stat-label">Games</span></div>
+    <div class="stat"><span class="stat-value" id="statAvg">0</span><span class="stat-label">Avg / game</span></div>
+  </section>
+
+  <section class="log-console">
+    <input type="number" id="amountInput" class="amount-input" placeholder="RP amount" inputmode="numeric" min="0">
+    <div class="action-row">
+      <button class="action gain" id="gainBtn" type="button">Log gain</button>
+      <button class="action loss" id="lossBtn" type="button">Log loss</button>
+    </div>
+    <div class="chip-row">
+      <span class="chip-group-label">Gain</span>
+      <button class="chip gain" data-sign="1" data-amount="10">+10</button>
+      <button class="chip gain" data-sign="1" data-amount="25">+25</button>
+      <button class="chip gain" data-sign="1" data-amount="50">+50</button>
+    </div>
+    <div class="chip-row">
+      <span class="chip-group-label">Loss</span>
+      <button class="chip loss" data-sign="-1" data-amount="12">-12</button>
+      <button class="chip loss" data-sign="-1" data-amount="18">-18</button>
+      <button class="chip loss" data-sign="-1" data-amount="24">-24</button>
+    </div>
+    <p class="input-error" id="inputError" hidden>Enter an RP amount above 0 first.</p>
+  </section>
+
+  <section class="history-section">
+    <h2 class="history-title">Match log</h2>
+    <ul class="history-list" id="historyList"></ul>
+    <p class="empty-state" id="emptyState">No games logged yet. Log your first result above.</p>
+  </section>
+
+  <p class="footnote">Rank thresholds are approximate guides. Exact RP cutoffs shift each season.</p>
+</div>
+
+<script>
+(function () {
+  var STORAGE_KEY = 'apexRpTrackerV1';
+  var state = { history: [] };
+
+  try {
+    var saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      var parsed = JSON.parse(saved);
+      if (parsed && Array.isArray(parsed.history)) state.history = parsed.history;
+    }
+  } catch (e) { /* start fresh */ }
+
+  function save() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ history: state.history })); }
+    catch (e) { /* storage unavailable, continue in-memory */ }
+  }
+
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  var TIERS = [
+    { name: 'Bronze',        min: 0,     max: 1200,     color: '#b3835a', divisions: true },
+    { name: 'Silver',        min: 1200,  max: 2800,     color: '#a7b0b8', divisions: true },
+    { name: 'Gold',          min: 2800,  max: 4900,     color: '#dba53f', divisions: true },
+    { name: 'Platinum',      min: 4900,  max: 7400,     color: '#2fb2a6', divisions: true },
+    { name: 'Diamond',       min: 7400,  max: 10000,    color: '#5c86f0', divisions: true },
+    { name: 'Master',        min: 10000, max: 20000,    color: '#b03a52', divisions: false },
+    { name: 'Apex Predator', min: 20000, max: Infinity, color: '#ff4433', divisions: false }
+  ];
+
+  function fmt(n) { return Math.round(n).toLocaleString('en-US'); }
+
+  function getRankInfo(rpRaw) {
+    var rp = Math.max(0, rpRaw);
+    var idx = TIERS.findIndex(function (t) { return rp < t.max; });
+    if (idx === -1) idx = TIERS.length - 1;
+    var tier = TIERS[idx];
+    var next = TIERS[idx + 1] || null;
+    var divisionLabel = '';
+    if (tier.divisions) {
+      var span = (tier.max - tier.min) / 4;
+      var d = Math.floor((rp - tier.min) / span);
+      if (d > 3) d = 3; if (d < 0) d = 0;
+      divisionLabel = ['IV', 'III', 'II', 'I'][d];
+    }
+    var progress = tier.max === Infinity ? 1 : (rp - tier.min) / (tier.max - tier.min);
+    return { tier: tier, next: next, divisionLabel: divisionLabel, progress: Math.min(1, Math.max(0, progress)) };
+  }
+
+  function timeAgo(ts) {
+    var diff = Math.floor((Date.now() - ts) / 1000);
+    if (diff < 5) return 'just now';
+    if (diff < 60) return diff + 's ago';
+    if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+    if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+    var d = new Date(ts);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+
+  function recompute() {
+    var running = 0, peak = 0;
+    var rows = state.history.map(function (e) {
+      running += e.delta;
+      if (running > peak) peak = running;
+      return { id: e.id, delta: e.delta, ts: e.ts, label: e.label || null, runningTotal: running };
+    });
+    return { rows: rows, total: running, peak: peak };
+  }
+
+  function animateNumber(el, from, to) {
+    if (reduceMotion || from === to) { el.textContent = fmt(to); return; }
+    var start = null, duration = 450;
+    function step(ts) {
+      if (start === null) start = ts;
+      var t = Math.min(1, (ts - start) / duration);
+      var eased = 1 - Math.pow(1 - t, 3);
+      el.textContent = fmt(from + (to - from) * eased);
+      if (t < 1) requestAnimationFrame(step);
+      else el.textContent = fmt(to);
+    }
+    requestAnimationFrame(step);
+  }
+
+  var rpTotalEl = document.getElementById('rpTotal');
+  var rankNameEl = document.getElementById('rankName');
+  var rankBadgeEl = document.getElementById('rankBadge');
+  var gaugeFillEl = document.getElementById('gaugeFill');
+  var gaugeLabelEl = document.getElementById('gaugeLabel');
+  var statPeakEl = document.getElementById('statPeak');
+  var statGamesEl = document.getElementById('statGames');
+  var statAvgEl = document.getElementById('statAvg');
+  var historyListEl = document.getElementById('historyList');
+  var emptyStateEl = document.getElementById('emptyState');
+  var amountInputEl = document.getElementById('amountInput');
+  var inputErrorEl = document.getElementById('inputError');
+
+  var lastRenderedTotal = 0;
+
+  function render(newEntryId) {
+    var computed = recompute();
+    var total = computed.total;
+    var info = getRankInfo(total);
+
+    rankBadgeEl.style.setProperty('--tier-color', info.tier.color);
+    rankNameEl.textContent = info.tier.name + (info.divisionLabel ? ' ' + info.divisionLabel : '');
+    animateNumber(rpTotalEl, lastRenderedTotal, total);
+    lastRenderedTotal = total;
+
+    gaugeFillEl.style.width = (info.progress * 100).toFixed(1) + '%';
+    if (info.next) {
+      gaugeLabelEl.textContent = fmt(info.next.min - Math.max(0, total)) + ' RP to ' + info.next.name;
+    } else {
+      gaugeLabelEl.textContent = "You've reached the top tier.";
+    }
+
+    var games = computed.rows.filter(function (r) { return !r.label; });
+    statPeakEl.textContent = fmt(Math.max(0, computed.peak));
+    statGamesEl.textContent = fmt(games.length);
+    var avg = games.length ? games.reduce(function (a, r) { return a + r.delta; }, 0) / games.length : 0;
+    statAvgEl.textContent = (avg > 0 ? '+' : '') + fmt(avg);
+
+    historyListEl.innerHTML = '';
+    var reversed = computed.rows.slice().reverse();
+    emptyStateEl.classList.toggle('show', reversed.length === 0);
+
+    reversed.forEach(function (row) {
+      var li = document.createElement('li');
+      li.className = 'history-row';
+      li.dataset.id = row.id;
+      if (row.id === newEntryId) li.classList.add('enter');
+
+      var color = row.label ? null : (row.delta >= 0 ? 'var(--accent-gain)' : 'var(--accent-loss)');
+      if (color) li.style.setProperty('--row-color', color);
+
+      var deltaSpan = document.createElement('span');
+      deltaSpan.className = 'row-delta';
+      deltaSpan.textContent = row.label ? '\u2192' : (row.delta >= 0 ? '+' + fmt(row.delta) : '\u2212' + fmt(Math.abs(row.delta)));
+
+      var totalSpan = document.createElement('span');
+      totalSpan.className = 'row-total';
+      totalSpan.textContent = row.label ? row.label + ' \u2022 ' + fmt(row.runningTotal) + ' RP' : fmt(row.runningTotal) + ' RP';
+
+      var timeSpan = document.createElement('span');
+      timeSpan.className = 'row-time';
+      timeSpan.dataset.ts = row.ts;
+      timeSpan.textContent = timeAgo(row.ts);
+
+      var delBtn = document.createElement('button');
+      delBtn.className = 'row-delete';
+      delBtn.type = 'button';
+      delBtn.setAttribute('aria-label', 'Delete entry');
+      delBtn.textContent = '\u00d7';
+      delBtn.addEventListener('click', function () {
+        state.history = state.history.filter(function (e) { return e.id !== row.id; });
+        save();
+        render();
+      });
+
+      li.appendChild(deltaSpan);
+      li.appendChild(totalSpan);
+      li.appendChild(timeSpan);
+      li.appendChild(delBtn);
+      historyListEl.appendChild(li);
+    });
+  }
+
+  function makeId() {
+    return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  }
+
+  function addEntry(delta, label) {
+    var entry = { id: makeId(), delta: delta, ts: Date.now(), label: label || null };
+    state.history.push(entry);
+    save();
+    render(entry.id);
+  }
+
+  function showError(msg) {
+    inputErrorEl.textContent = msg;
+    inputErrorEl.hidden = false;
+  }
+  function clearError() { inputErrorEl.hidden = true; }
+
+  function logFromInput(sign) {
+    var val = parseFloat(amountInputEl.value);
+    if (!val || val <= 0) {
+      showError('Enter an RP amount above 0 first.');
+      amountInputEl.focus();
+      return;
+    }
+    clearError();
+    addEntry(sign * Math.round(val));
+    amountInputEl.value = '';
+    amountInputEl.focus();
+  }
+
+  document.getElementById('gainBtn').addEventListener('click', function () { logFromInput(1); });
+  document.getElementById('lossBtn').addEventListener('click', function () { logFromInput(-1); });
+  amountInputEl.addEventListener('input', clearError);
+  amountInputEl.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') logFromInput(1);
+  });
+
+  document.querySelectorAll('.chip').forEach(function (chip) {
+    chip.addEventListener('click', function () {
+      var sign = parseInt(chip.dataset.sign, 10);
+      var amount = parseInt(chip.dataset.amount, 10);
+      addEntry(sign * amount);
+    });
+  });
+
+  var resetBtn = document.getElementById('resetBtn');
+  var resetTimer = null;
+  resetBtn.addEventListener('click', function () {
+    if (resetBtn.classList.contains('confirming')) {
+      state.history = [];
+      save();
+      render();
+      resetBtn.classList.remove('confirming');
+      resetBtn.textContent = 'Reset';
+      clearTimeout(resetTimer);
+    } else {
+      resetBtn.classList.add('confirming');
+      resetBtn.textContent = 'Confirm?';
+      resetTimer = setTimeout(function () {
+        resetBtn.classList.remove('confirming');
+        resetBtn.textContent = 'Reset';
+      }, 3500);
+    }
+  });
+
+  var startingToggle = document.getElementById('setStartingToggle');
+  var startingForm = document.getElementById('startingForm');
+  var startingInput = document.getElementById('startingInput');
+  startingToggle.addEventListener('click', function () {
+    startingForm.classList.toggle('open');
+    if (startingForm.classList.contains('open')) startingInput.focus();
+  });
+  document.getElementById('startingSubmit').addEventListener('click', function () {
+    var val = parseFloat(startingInput.value);
+    if (isNaN(val) || val < 0) return;
+    var current = recompute().total;
+    var delta = Math.round(val) - current;
+    if (delta !== 0) addEntry(delta, 'Starting RP');
+    startingInput.value = '';
+    startingForm.classList.remove('open');
+  });
+
+  setInterval(function () {
+    document.querySelectorAll('.row-time').forEach(function (el) {
+      el.textContent = timeAgo(parseInt(el.dataset.ts, 10));
+    });
+  }, 30000);
+
+  render();
+})();
+</script>
+</body>
+</html>
